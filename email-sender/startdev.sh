@@ -1,2 +1,2 @@
 #!/bin/bash
-docker-compose -f docker-compose.dev up
+docker-compose -f docker-compose.dev.yml up
