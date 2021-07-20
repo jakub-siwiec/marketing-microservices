@@ -1,10 +1,25 @@
 version: "3.8"
 services:
+  db:
+    image: mysql:5.7.22
+    container_name: mysql-email_sender
+    restart: always
+    environment:
+      MYSQL_DATABASE: main
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - .dbdata:/var/lib/mysql
+    ports:
+      - 3306:3306
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    command: "python main.py"
+    container_name: backend-email_sender
+    command: bash -c "while !</dev/tcp/db/3306; do sleep 1; done; export FLASK_APP=email_sender && python main.py"
     ports:
       - 8001:5000
     volumes:
@@ -19,16 +34,3 @@ services:
   #     command: 'python -u consumer.py'
   #     depends_on:
   #       - db
-
-  db:
-    image: mysql:5.7.22
-    restart: always
-    environment:
-      MYSQL_DATABASE: main
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
-      MYSQL_ROOT_PASSWORD: root
-    volumes:
-      - .dbdata:/var/lib/mysql
-    ports:
-      - 33067:3306
