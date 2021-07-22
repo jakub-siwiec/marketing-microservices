@@ -1,10 +1,13 @@
-from flask import Flask, render_template
+from flask import Flask, redirect, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from forms import MyForm
+import os
 
-
+SECRET_KEY = os.urandom(32)
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = 'mysql://root:root@mysql-email_sender:3306/main'
+app.config['SECRET_KEY'] = SECRET_KEY
 CORS(app)
 db = SQLAlchemy(app)
 
@@ -23,9 +26,12 @@ db.create_all()
 # db.session.commit()
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    return render_template('temp-index.html', name='Test')
+    form = MyForm()
+    if form.validate_on_submit():
+        return redirect('/email-templates')
+    return render_template('temp-index.html', name='Test', form=form)
 
 @app.route('/email-templates')
 def templates():
