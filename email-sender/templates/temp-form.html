@@ -1,11 +1,19 @@
 {% extends "base.html" %}
 
 {% block content %}
-{{ form }}
 <form method="post">
     {{ form.csrf_token() }}
-    {{ form.title.label }} {{ form.title }}
-    {{ form.subject.label }} {{ form.subject }}
-    {{ form.body.label }} {{ form.body }}
+    <div style="width:100%;">
+        <label>{{ form.title.label }}</label> 
+        <div>{{ form.title(size=60) }}</div>
+    </div>
+    <div style="width:100%;">
+        <label>{{ form.subject.label }}</label> 
+        <div>{{ form.subject(size=60) }}</div>
+    </div>
+    <div style="width:100%;">
+        <label>{{ form.body.label }}</label> 
+        <div>{{ form.body(rows='25',cols='52') }}</div>
+    </div>   
     {{ form.submit }}
 {% endblock %}

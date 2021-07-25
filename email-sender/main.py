@@ -27,10 +27,6 @@ class EmailTemplate(db.Model):
 
 db.create_all()
 
-# test = EmailTemplate(title="Test", subject="Test Subject", body="Test body")
-# db.session.add(test)
-# db.session.commit()
-
 
 @app.route('/', methods=['GET', 'POST'])
 def formsPage():
