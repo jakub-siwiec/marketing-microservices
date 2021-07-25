@@ -1,8 +1,9 @@
 from flask import Flask, redirect, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from forms import MyForm
 import os
+
+from forms import MyForm
 
 SECRET_KEY = os.urandom(32)
 app = Flask(__name__)
@@ -19,6 +20,11 @@ class EmailTemplate(db.Model):
     body = db.Column(db.String(1000), nullable=False)
     db.UniqueConstraint(subject, body)
 
+    def __init__(self, title, subject, body):
+        self.title = title
+        self.subject = subject
+        self.body = body
+
 db.create_all()
 
 # test = EmailTemplate(title="Test", subject="Test Subject", body="Test body")
@@ -27,15 +33,23 @@ db.create_all()
 
 
 @app.route('/', methods=['GET', 'POST'])
-def index():
+def formsPage():
     form = MyForm()
     if form.validate_on_submit():
-        return redirect('/email-templates')
-    return render_template('temp-index.html', name='Test', form=form)
+        try:
+            newTemplate = EmailTemplate(title=form.title.data, subject=form.subject.data, body=form.body.data)
+            db.session.add(newTemplate)
+            db.session.commit()
+            return redirect('/list')
+        except:
+            return f'''<h1>Error</h1>'''
+        
+    return render_template('temp-form.html', form=form)
 
-@app.route('/email-templates')
-def templates():
-    return 'Have fun'
+@app.route('/list')
+def index():
+    email_templates = EmailTemplate.query.all()
+    return render_template('temp-index.html', name='Test', emailTemplates=email_templates)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

@@ -1,9 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
-<form method="POST" action="/">
-    {{ form.csrf_token }}
-    {{ form.name.label }} {{ form.name(size=20) }}
-    <input type="submit" value="Go">
-</form>
+
+{% for emailTemplate in emailTemplates %}
+    <p>---</p>
+    <p>{{ emailTemplate.id }}</p>
+    <p>{{ emailTemplate.title }}</p>
+    <p>{{ emailTemplate.subject }}</p>
+    <p>{{ emailTemplate.body }}</p>
+    <p>---</p>
+{% endfor %}
+
+
 {% endblock %}
