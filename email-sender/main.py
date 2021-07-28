@@ -45,7 +45,18 @@ def formsPage():
 @app.route('/list')
 def index():
     email_templates = EmailTemplate.query.all()
-    return render_template('temp-index.html', name='Test', emailTemplates=email_templates)
+    return render_template('temp-index.html', emailTemplates=email_templates)
+
+@app.route('/<template_id>', methods=['POST'])
+def deleteTemplate(template_id):
+    try:
+        template = EmailTemplate.query.filter_by(id=template_id)
+        template.delete()
+        db.session.commit()
+        email_templates = EmailTemplate.query.all()
+        return render_template('temp-index.html', emailTemplates=email_templates)
+    except:
+        return f'''<h1>Error</h1>'''
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

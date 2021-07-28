@@ -8,6 +8,11 @@
     <p>{{ emailTemplate.title }}</p>
     <p>{{ emailTemplate.subject }}</p>
     <p>{{ emailTemplate.body }}</p>
+    <p>
+        <form method="post" action="{{ url_for('deleteTemplate', template_id=emailTemplate.id) }}">
+            <button type="submit">Delete</button>
+          </form>
+    </p>
     <p>---</p>
 {% endfor %}
 
