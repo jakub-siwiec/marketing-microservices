@@ -75,7 +75,7 @@ def deleteTemplate(template_id):
         template.delete()
         db.session.commit()
         email_templates = EmailTemplate.query.all()
-        return render_template('temp-index.html', emailTemplates=email_templates)
+        return render_template('temp-deleted.html', emailTemplates=email_templates)
     except:
         return f'''<h1>Error</h1>'''
 
