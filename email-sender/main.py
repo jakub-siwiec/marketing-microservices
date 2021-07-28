@@ -1,4 +1,4 @@
-from flask import Flask, redirect, render_template
+from flask import Flask, redirect, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
@@ -27,9 +27,14 @@ class EmailTemplate(db.Model):
 
 db.create_all()
 
+@app.route('/list')
+def index():
+    email_templates = EmailTemplate.query.all()
+    return render_template('temp-index.html', emailTemplates=email_templates)
+
 
 @app.route('/', methods=['GET', 'POST'])
-def formsPage():
+def addTemplate():
     form = MyForm()
     if form.validate_on_submit():
         try:
@@ -42,12 +47,28 @@ def formsPage():
         
     return render_template('temp-form.html', form=form)
 
-@app.route('/list')
-def index():
-    email_templates = EmailTemplate.query.all()
-    return render_template('temp-index.html', emailTemplates=email_templates)
+@app.route('/<template_id>', methods=['GET', 'POST'])
+def updateTemplate(template_id):
+    template = EmailTemplate.query.filter_by(id=template_id).first()
+    form = MyForm()
+    if request.method == "GET":
+        form.title.data = template.title
+        form.subject.data = template.subject
+        form.body.data = template.body
+        return render_template('temp-form.html', template=template, form=form)
+    elif request.method == "POST":
+        try:
+            template.title = form.title.data
+            template.subject = form.subject.data
+            template.body = form.body.data
+            db.session.commit()
+            return redirect('/list')
+        except:
+            return f'''<h1>Error</h1>'''
 
-@app.route('/<template_id>', methods=['POST'])
+
+
+@app.route('/<template_id>/delete', methods=['POST'])
 def deleteTemplate(template_id):
     try:
         template = EmailTemplate.query.filter_by(id=template_id)
