@@ -1,7 +1,17 @@
 from flask import Flask, redirect, render_template, request
+from flask.helpers import url_for
+from flask_login import (
+    LoginManager,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
+from flask_oauthlib.client import OAuth
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
+from decouple import config
 
 from forms import MyForm
 
@@ -9,8 +19,24 @@ SECRET_KEY = os.urandom(32)
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = 'mysql://root:root@mysql-email_sender:3306/main'
 app.config['SECRET_KEY'] = SECRET_KEY
+
+oauth = OAuth()
 CORS(app)
 db = SQLAlchemy(app)
+
+gmail = oauth.remote_app('gmail', 
+    register=True,
+    consumer_key=config('GMAIL_CONSUMER_KEY'),
+    consumer_secret=config('GMAIL_CONSUMER_SECRET'),
+    authorize_url=config('GMAIL_AUTHORIZE_URL'),
+    access_token_url=config('GMAIL_ACCESS_TOKEN_URL'),
+    request_token_params={
+        "redirect_uris": config('GMAIL_REDIRECT_URIS'),
+        "project_id": config('GMAIL_PROJECT_ID'),
+        "auth_provider_x509_cert_url": config('GMAIL_AUTH_PROVIDER_X509_CERT_URL'),
+        "scope": config('GMAIL_SCOPE')
+    }
+)
 
 class EmailTemplate(db.Model):
     __tablename__ = 'emailTemplates'
@@ -26,6 +52,16 @@ class EmailTemplate(db.Model):
         self.body = body
 
 db.create_all()
+
+@app.route('/login')
+def login():
+    return gmail.authorize(callback=url_for('authorized', _external=True))
+
+@app.route('/login/authorized')
+def authorized():
+    resp = gmail.authorized_response()
+    print(resp)
+    return redirect('/list')
 
 @app.route('/list')
 def index():
