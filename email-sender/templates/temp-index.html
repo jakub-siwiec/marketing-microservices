@@ -20,6 +20,10 @@
     <p>---</p>
     <br><br>
     <a href="/"><button type="submit">New</button></a>
+    <p>---</p>
+    {% if session['email'] %}
+    <h1>Welcome {{ session['email'] }}!</h1>
+    {% endif %}
 {% endfor %}
 
 

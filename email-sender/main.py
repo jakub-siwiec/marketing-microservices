@@ -1,7 +1,8 @@
-from flask import Flask, redirect, render_template, request
+from flask import Flask, flash, redirect, render_template, request, session
 from flask.helpers import url_for
 from flask_login import (
     LoginManager,
+    UserMixin,
     current_user,
     login_required,
     login_user,
@@ -12,6 +13,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
 from decouple import config
+import requests
+import base64
+
 
 from forms import MyForm
 
@@ -23,6 +27,8 @@ app.config['SECRET_KEY'] = SECRET_KEY
 oauth = OAuth()
 CORS(app)
 db = SQLAlchemy(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 
 gmail = oauth.remote_app('gmail', 
     register=True,
@@ -37,6 +43,15 @@ gmail = oauth.remote_app('gmail',
         "scope": config('GMAIL_SCOPE')
     }
 )
+
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(254), unique=True, nullable=False)
+
+    def __init__(self, email):
+        self.email = email
+
 
 class EmailTemplate(db.Model):
     __tablename__ = 'emailTemplates'
@@ -53,6 +68,10 @@ class EmailTemplate(db.Model):
 
 db.create_all()
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
+
 @app.route('/login')
 def login():
     return gmail.authorize(callback=url_for('authorized', _external=True))
@@ -60,8 +79,20 @@ def login():
 @app.route('/login/authorized')
 def authorized():
     resp = gmail.authorized_response()
-    print(resp)
-    return redirect('/list')
+    access_token_auth = resp['access_token']
+    resp_get_profile = requests.get("https://www.googleapis.com/gmail/v1/users/me/profile", headers={"Authorization": "Bearer " + access_token_auth}).json()
+    email_auth = resp_get_profile['emailAddress']
+    if User.query.filter_by(email=email_auth).first() == None:
+        new_user = User(email=email_auth)
+        db.session.add(new_user)
+        db.session.commit()
+    session['refresh-token'] = resp['refresh_token']
+    session['access-token'] = access_token_auth
+    session['email'] = access_token_auth
+    print(session['email'], flush=True)
+    return f'''<h1>{{session}}</h1>'''
+
+    # return redirect('/list')
 
 @app.route('/list')
 def index():
@@ -101,8 +132,6 @@ def updateTemplate(template_id):
             return redirect('/list')
         except:
             return f'''<h1>Error</h1>'''
-
-
 
 @app.route('/<template_id>/delete', methods=['POST'])
 def deleteTemplate(template_id):
