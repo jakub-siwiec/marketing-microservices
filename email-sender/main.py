@@ -74,26 +74,35 @@ def load_user(user_id):
 
 @app.route('/login')
 def login():
-    return gmail.authorize(callback=url_for('authorized', _external=True))
+    try:
+        return gmail.authorize(callback=url_for('authorized', _external=True))
+    except:
+        return f'''<h1>Error</h1>'''
 
 @app.route('/login/authorized')
 def authorized():
     resp = gmail.authorized_response()
     access_token_auth = resp['access_token']
-    resp_get_profile = requests.get("https://www.googleapis.com/gmail/v1/users/me/profile", headers={"Authorization": "Bearer " + access_token_auth}).json()
-    email_auth = resp_get_profile['emailAddress']
-    user = User.query.filter_by(email=email_auth).first()
-    if user == None:
-        new_user = User(email=email_auth)
-        db.session.add(new_user)
-        db.session.commit()
-        user = User.query.filter_by(email=email_auth).first()
-    session['refresh-token'] = resp['refresh_token']
-    session['access-token'] = access_token_auth
-    session['email'] = email_auth
-    login_user(user)
-    print(session.get('email'), flush=True)
-    return redirect('/list')
+    try:
+        resp_get_profile = requests.get("https://www.googleapis.com/gmail/v1/users/me/profile", headers={"Authorization": "Bearer " + access_token_auth}).json()
+        print(resp_get_profile, flush=True)
+        if resp_get_profile:
+            email_auth = resp_get_profile['emailAddress']
+            user = User.query.filter_by(email=email_auth).first()
+            if user == None:
+                new_user = User(email=email_auth)
+                db.session.add(new_user)
+                db.session.commit()
+                user = User.query.filter_by(email=email_auth).first()
+            session['refresh-token'] = resp['refresh_token']
+            session['access-token'] = access_token_auth
+            session['email'] = email_auth
+            login_user(user)
+            print(session.get('email'), flush=True)
+            return redirect('/list')
+        return f'''<h1>Error</h1>'''
+    except:
+        return f'''<h1>Error</h1>'''
 
 @app.route("/logout")
 @login_required
