@@ -70,7 +70,7 @@ db.create_all()
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    return User.query.get(user_id)
 
 @app.route('/login')
 def login():
@@ -82,17 +82,27 @@ def authorized():
     access_token_auth = resp['access_token']
     resp_get_profile = requests.get("https://www.googleapis.com/gmail/v1/users/me/profile", headers={"Authorization": "Bearer " + access_token_auth}).json()
     email_auth = resp_get_profile['emailAddress']
-    if User.query.filter_by(email=email_auth).first() == None:
+    user = User.query.filter_by(email=email_auth).first()
+    if user == None:
         new_user = User(email=email_auth)
         db.session.add(new_user)
         db.session.commit()
+        user = User.query.filter_by(email=email_auth).first()
     session['refresh-token'] = resp['refresh_token']
     session['access-token'] = access_token_auth
-    session['email'] = access_token_auth
-    print(session['email'], flush=True)
-    return f'''<h1>{{session}}</h1>'''
+    session['email'] = email_auth
+    login_user(user)
+    print(session.get('email'), flush=True)
+    return redirect('/list')
 
-    # return redirect('/list')
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    session.pop('refresh-token', None)
+    session.pop('access-token', None)
+    session.pop('email', None)
+    return redirect(url_for("index"))
 
 @app.route('/list')
 def index():
@@ -101,6 +111,7 @@ def index():
 
 
 @app.route('/', methods=['GET', 'POST'])
+@login_required
 def addTemplate():
     form = MyForm()
     if form.validate_on_submit():
@@ -115,6 +126,7 @@ def addTemplate():
     return render_template('temp-form.html', form=form)
 
 @app.route('/<template_id>', methods=['GET', 'POST'])
+@login_required
 def updateTemplate(template_id):
     template = EmailTemplate.query.filter_by(id=template_id).first()
     form = MyForm()
@@ -134,6 +146,7 @@ def updateTemplate(template_id):
             return f'''<h1>Error</h1>'''
 
 @app.route('/<template_id>/delete', methods=['POST'])
+@login_required
 def deleteTemplate(template_id):
     try:
         template = EmailTemplate.query.filter_by(id=template_id)
