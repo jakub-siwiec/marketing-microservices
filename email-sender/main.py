@@ -56,6 +56,7 @@ class User(UserMixin, db.Model):
 class EmailTemplate(db.Model):
     __tablename__ = 'emailTemplates'
     id = db.Column(db.Integer, primary_key=True)
+    user = db.Column(db.String(254), db.ForeignKey('users.email'), nullable=False)
     title = db.Column(db.String(254), unique=True, nullable=False)
     subject = db.Column(db.String(254), nullable=False)
     body = db.Column(db.String(1000), nullable=False)
@@ -85,7 +86,6 @@ def authorized():
     access_token_auth = resp['access_token']
     try:
         resp_get_profile = requests.get("https://www.googleapis.com/gmail/v1/users/me/profile", headers={"Authorization": "Bearer " + access_token_auth}).json()
-        print(resp_get_profile, flush=True)
         if resp_get_profile:
             email_auth = resp_get_profile['emailAddress']
             user = User.query.filter_by(email=email_auth).first()
@@ -98,7 +98,6 @@ def authorized():
             session['access-token'] = access_token_auth
             session['email'] = email_auth
             login_user(user)
-            print(session.get('email'), flush=True)
             return redirect('/list')
         return f'''<h1>Error</h1>'''
     except:
@@ -107,52 +106,66 @@ def authorized():
 @app.route("/logout")
 @login_required
 def logout():
-    logout_user()
-    session.pop('refresh-token', None)
-    session.pop('access-token', None)
-    session.pop('email', None)
-    return redirect(url_for("index"))
+    try:
+        logout_user()
+        session.pop('refresh-token', None)
+        session.pop('access-token', None)
+        session.pop('email', None)
+        return redirect(url_for("index"))
+    except:
+        return f'''<h1>Error</h1>'''
 
 @app.route('/list')
 def index():
-    email_templates = EmailTemplate.query.all()
-    return render_template('temp-index.html', emailTemplates=email_templates)
+    try:
+        print(current_user.email, flush=True)
+        email_templates = EmailTemplate.query.all()
+        return render_template('temp-index.html', emailTemplates=email_templates)
+    except:
+        return f'''<h1>Error</h1>'''
 
 
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def addTemplate():
-    form = MyForm()
-    if form.validate_on_submit():
-        try:
-            newTemplate = EmailTemplate(title=form.title.data, subject=form.subject.data, body=form.body.data)
-            db.session.add(newTemplate)
-            db.session.commit()
-            return redirect('/list')
-        except:
-            return f'''<h1>Error</h1>'''
-        
-    return render_template('temp-form.html', form=form)
+    try:
+        form = MyForm()
+        if form.validate_on_submit():
+            try:
+                newTemplate = EmailTemplate(title=form.title.data, subject=form.subject.data, body=form.body.data)
+                db.session.add(newTemplate)
+                db.session.commit()
+                return redirect('/list')
+            except:
+                return f'''<h1>Error</h1>'''
+        return render_template('temp-form.html', form=form)
+    except:
+        return f'''<h1>Error</h1>'''
+
 
 @app.route('/<template_id>', methods=['GET', 'POST'])
 @login_required
 def updateTemplate(template_id):
-    template = EmailTemplate.query.filter_by(id=template_id).first()
-    form = MyForm()
-    if request.method == "GET":
-        form.title.data = template.title
-        form.subject.data = template.subject
-        form.body.data = template.body
-        return render_template('temp-form.html', template=template, form=form)
-    elif request.method == "POST":
-        try:
-            template.title = form.title.data
-            template.subject = form.subject.data
-            template.body = form.body.data
-            db.session.commit()
-            return redirect('/list')
-        except:
-            return f'''<h1>Error</h1>'''
+    try:
+        template = EmailTemplate.query.filter_by(id=template_id).first()
+        form = MyForm()
+        if request.method == "GET":
+            form.title.data = template.title
+            form.subject.data = template.subject
+            form.body.data = template.body
+            return render_template('temp-form.html', template=template, form=form)
+        elif request.method == "POST":
+            try:
+                template.title = form.title.data
+                template.subject = form.subject.data
+                template.body = form.body.data
+                db.session.commit()
+                return redirect('/list')
+            except:
+                return f'''<h1>Error</h1>'''
+    except:
+        return f'''<h1>Error</h1>'''
+
 
 @app.route('/<template_id>/delete', methods=['POST'])
 @login_required
