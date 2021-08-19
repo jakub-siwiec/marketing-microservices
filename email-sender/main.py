@@ -99,6 +99,7 @@ def authorized():
             session['refresh-token'] = resp['refresh_token']
             session['access-token'] = access_token_auth
             session['email'] = email_auth
+            session['userId'] = resp_get_profile['historyId']
             login_user(user)
             return redirect('/list')
         return f'''<h1>Error</h1>'''
@@ -177,6 +178,18 @@ def deleteTemplate(template_id):
         db.session.commit()
         email_templates = EmailTemplate.query.all()
         return render_template('temp-deleted.html', emailTemplates=email_templates)
+    except:
+        return f'''<h1>Error</h1>'''
+
+@app.route('/user-data', methods=['GET'])
+@login_required
+def userData():
+    try:
+        msgs = requests.get("https://gmail.googleapis.com/gmail/v1/users/me/messages", headers={"Authorization": "Bearer " + session['access-token']}).json()
+        print(msgs, flush=True)
+        msg = requests.get("https://gmail.googleapis.com/gmail/v1/users/me/messages/{}".format(msgs["messages"][0]["id"]), headers={"Authorization": "Bearer " + session['access-token']}).json()
+        print(msg, flush=True)
+        return f'''<h1>Success</h1>'''
     except:
         return f'''<h1>Error</h1>'''
 
