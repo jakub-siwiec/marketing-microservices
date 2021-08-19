@@ -48,6 +48,7 @@ class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(254), unique=True, nullable=False)
+    emailTemplates = db.relationship('EmailTemplate', backref='users', lazy=True, uselist=False)
 
     def __init__(self, email):
         self.email = email
@@ -56,13 +57,14 @@ class User(UserMixin, db.Model):
 class EmailTemplate(db.Model):
     __tablename__ = 'emailTemplates'
     id = db.Column(db.Integer, primary_key=True)
-    user = db.Column(db.String(254), db.ForeignKey('users.email'), nullable=False)
+    user = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     title = db.Column(db.String(254), unique=True, nullable=False)
     subject = db.Column(db.String(254), nullable=False)
     body = db.Column(db.String(1000), nullable=False)
     db.UniqueConstraint(subject, body)
 
-    def __init__(self, title, subject, body):
+    def __init__(self, user, title, subject, body):
+        self.user = user
         self.title = title
         self.subject = subject
         self.body = body
@@ -131,13 +133,12 @@ def addTemplate():
     try:
         form = MyForm()
         if form.validate_on_submit():
-            try:
-                newTemplate = EmailTemplate(title=form.title.data, subject=form.subject.data, body=form.body.data)
-                db.session.add(newTemplate)
-                db.session.commit()
-                return redirect('/list')
-            except:
-                return f'''<h1>Error</h1>'''
+            currentUser = User.query.filter_by(email=session["email"]).first()
+            newTemplate = EmailTemplate(title=form.title.data, subject=form.subject.data, body=form.body.data, user=currentUser.id)
+            print(newTemplate, flush=True)
+            db.session.add(newTemplate)
+            db.session.commit()
+            return redirect('/list')
         return render_template('temp-form.html', form=form)
     except:
         return f'''<h1>Error</h1>'''
